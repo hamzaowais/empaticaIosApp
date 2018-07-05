@@ -22,7 +22,23 @@ class ViewController: UITableViewController {
     private var cout=0;
     private var initialTime=Date().timeIntervalSince1970;
     private var Config  = SettingHelper()
-    private var socketClient = StompClientLib()
+    private var socketClient = StompClientLib();
+    
+    private var bvp: [Float] = [];
+    private var bvpdiff: [Float] = [];
+    private var lastBvp: Float = 0.0;
+    
+    private var fs = 64;
+    private var processWind = 10;
+    private var samplesPerMs:Float = 1000/64;
+    
+    private var samplesWind = 10*64;
+
+    
+    
+    
+    
+    
     
     private var allDisconnected : Bool {
         
@@ -278,6 +294,10 @@ extension ViewController: EmpaticaDeviceDelegate {
         someDict["timeStamp"]=timestamp
         someDict["value"]=bvp;
         someDict["key"]="bvp";
+        self.bvp.append(bvp);
+        self.bvpdiff.append(bvp-self.lastBvp);
+        self.lastBvp=bvp;
+        
         guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
         var string = String(data: httpBody, encoding: String.Encoding.utf8)
         
@@ -306,6 +326,69 @@ extension ViewController: EmpaticaDeviceDelegate {
         self.updateValue1(device: device, string: "{ \(temp) }", int: 4);
     }
     
+    
+    func calculateHRMinMax() -> Float {
+        let bvp = self.bvp;
+        let bvpdif = self.bvpdiff;
+        let lastbvp = Array(bvp.suffix(self.samplesWind));
+        let lastbvpdif = Array(bvpdif.suffix(self.samplesWind));
+        let minValidIBI : Float = 400;
+        var temp_dx = lastbvp[0];
+        var indMin : [Int] = [];
+        var indMax : [Int] = [];
+        
+        
+        var ibiValArr : [Float] = [];
+        
+        for i in 1..<lastbvpdif.count{
+            
+            if((temp_dx<0 && lastbvpdif[i]<0) || (temp_dx>0 && lastbvpdif[i]>0)){
+                
+            }
+            
+            if((temp_dx<0 && lastbvpdif[i]>0) || (lastbvp[i-1]<=0)){
+                indMin.append(i);
+            }
+            
+            if((temp_dx>0 && lastbvpdif[i]<0) || (lastbvp[i-1]>=0)){
+                indMax.append(i);
+            }
+            temp_dx=lastbvpdif[i];
+        }
+        
+        
+        for i in 2..<indMin.count{
+            let tempVal = Float(indMin[i]-indMin[i-1])*self.samplesPerMs;
+            if(tempVal >= minValidIBI){
+                ibiValArr.append(tempVal);
+            }
+        }
+        
+        func average(nums: [Float]) -> Float {
+            
+            var total : Float = 0
+            //use the parameter-array instead of the global variable votes
+            for vote in nums{
+                
+                total += Float(vote)
+                
+            }
+            
+            let votesTotal = Float(nums.count)
+            var average = total/votesTotal
+            return average
+        }
+        
+        
+        
+        let meanIbiValue=average(nums: ibiValArr);
+        
+        let hr = 60/meanIbiValue;
+        
+        return hr;
+        
+        
+    }
     
     func didReceiveAccelerationX(_ x: Int8, y: Int8, z: Int8, withTimestamp timestamp: Double, fromDevice device: EmpaticaDeviceManager!) {
         
@@ -337,6 +420,9 @@ extension ViewController: EmpaticaDeviceDelegate {
         
         
     }
+    
+    
+    
     
     
     
