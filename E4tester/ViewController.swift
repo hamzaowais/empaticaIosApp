@@ -33,7 +33,9 @@ class ViewController: UITableViewController {
     
     private var heartRateInst : [Float] = [];
     private var heartRateAvg : [Float] = [];
-
+    
+    private var flag=1;
+    
     
     
     
@@ -52,7 +54,7 @@ class ViewController: UITableViewController {
     
     override func viewDidLoad() {
         
-        let url = NSURL(string: self.Config.ACTIVEQHost)!
+        let url = NSURL(string: "ws://172.31.186.13:61614")!
         socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
         
         super.viewDidLoad()
@@ -264,45 +266,47 @@ extension ViewController: EmpaticaDeviceDelegate {
         
         var someDict = [String: Any]();
         someDict["@type"]="feature";
-        someDict["creationTimestamp"]=timestamp;
+        someDict["creationTimestamp"]=timestamp*1000;
         someDict["source"]="EMPATICA";
         someDict["feature"]="RR_INTERVAL"
         someDict["value"]=ibi
+        
+        
         guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
         if let string = String(data: httpBody, encoding: String.Encoding.utf8){
-            socketClient.sendMessage(message: string , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
+            socketClient.sendMessage(message: string , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
         }
         
         
         let heartrate = (1/ibi)*60;
         
-        var someDict1 = [String: Any]();
-        someDict["@type"]="feature";
-        someDict["creationTimestamp"]=timestamp;
-        someDict["source"]="EMPATICA";
-        someDict["feature"]="HR_IBI"
-        someDict["value"]=heartrate
-        guard let httpBody1 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
-        if let string1 = String(data: httpBody1, encoding: String.Encoding.utf8){
-            socketClient.sendMessage(message: string1 , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
-        }
+        //        var someDict1 = [String: Any]();
+        //        someDict["@type"]="feature";
+        //        someDict["creationTimestamp"]=timestamp*1000;
+        //        someDict["source"]="EMPATICA";
+        //        someDict["feature"]="HR_IBI"
+        //        someDict["value"]=heartrate
+        //        guard let httpBody1 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
+        //        if let string1 = String(data: httpBody1, encoding: String.Encoding.utf8){
+        //            socketClient.sendMessage(message: string1 , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        //        }
         
-//        var someDict = [String: Any]();
-//        someDict["serialNumber"]=device.serialNumber;
-//        someDict["timeStamp"]=timestamp
-//        someDict["value"]=ibi;
-//        someDict["key"]="ibi";
-//        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
-//        var string = String(data: httpBody, encoding: String.Encoding.utf8)
-//
-//
-//        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
-//
+        //        var someDict = [String: Any]();
+        //        someDict["serialNumber"]=device.serialNumber;
+        //        someDict["timeStamp"]=timestamp
+        //        someDict["value"]=ibi;
+        //        someDict["key"]="ibi";
+        //        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        //        var string = String(data: httpBody, encoding: String.Encoding.utf8)
+        //
+        //
+        //        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        //
         //print(string);
         
         
-//        print("heartrate: from the ibi values:")
-//        print(heartrate);
+        //        print("heartrate: from the ibi values:")
+        //        print(heartrate);
         self.updateValue1(device: device, string: "{ \(timestamp) :  \(ibi) secs / \(heartrate) hr}",int: 1);
         
     }
@@ -311,27 +315,27 @@ extension ViewController: EmpaticaDeviceDelegate {
         
         var someDict = [String: Any]();
         someDict["@type"]="feature";
-        someDict["creationTimestamp"]=timestamp;
+        someDict["creationTimestamp"]=timestamp*1000;
         someDict["source"]="EMPATICA";
         someDict["feature"]="GSR"
         someDict["value"]=gsr
         guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
         if let string = String(data: httpBody, encoding: String.Encoding.utf8){
-            socketClient.sendMessage(message: string , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
+            socketClient.sendMessage(message: string , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
         }
         
         
         
-//        var someDict = [String: Any]();
-//        someDict["serialNumber"]=device.serialNumber;
-//        someDict["timeStamp"]=timestamp
-//        someDict["value"]=gsr;
-//        someDict["key"]="gsr";
-//        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
-//        var string = String(data: httpBody, encoding: String.Encoding.utf8)
-//
-////
-//        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
+        //        var someDict = [String: Any]();
+        //        someDict["serialNumber"]=device.serialNumber;
+        //        someDict["timeStamp"]=timestamp
+        //        someDict["value"]=gsr;
+        //        someDict["key"]="gsr";
+        //        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        //        var string = String(data: httpBody, encoding: String.Encoding.utf8)
+        //
+        ////
+        //        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
         
         //print(string);
         
@@ -342,20 +346,33 @@ extension ViewController: EmpaticaDeviceDelegate {
     
     func didReceiveBVP(_ bvp: Float, withTimestamp timestamp: Double, fromDevice device: EmpaticaDeviceManager!) {
         
-//        var someDict = [String: Any]();
-//        someDict["serialNumber"]=device.serialNumber;
-//        someDict["timeStamp"]=timestamp
-//        someDict["value"]=bvp;
-//        someDict["key"]="bvp";
+        
+        var someDict = [String: Any]();
+        someDict["@type"]="feature";
+        someDict["creationTimestamp"]=timestamp*1000;
+        someDict["source"]="EMPATICA";
+        someDict["feature"]="BVP"
+        someDict["value"]=bvp
+        
+        
         self.bvp.append(bvp);
         self.bvpdiff.append(bvp-self.lastBvp);
         self.lastBvp=bvp;
         
-//        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
-//        var string = String(data: httpBody, encoding: String.Encoding.utf8)
-//
-//
-//        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
+        self.flag=0;
+        
+        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        if let string = String(data: httpBody, encoding: String.Encoding.utf8){
+            socketClient.sendMessage(message: string , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        }
+        
+        
+        
+        //        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        //        var string = String(data: httpBody, encoding: String.Encoding.utf8)
+        //
+        //
+        //        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
         
         //print(string);
         
@@ -365,14 +382,15 @@ extension ViewController: EmpaticaDeviceDelegate {
     func didReceiveTemperature(_ temp: Float, withTimestamp timestamp: Double, fromDevice device: EmpaticaDeviceManager!) {
         var someDict = [String: Any]();
         someDict["@type"]="feature";
-        someDict["creationTimestamp"]=timestamp;
+        someDict["creationTimestamp"]=timestamp*1000;
         someDict["source"]="EMPATICA";
-        someDict["key"]="temp";
         someDict["feature"]="SKIN_TEMPERATURE"
         someDict["value"]=temp
+        
+        //        print("templreture");
         guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
         if let string = String(data: httpBody, encoding: String.Encoding.utf8){
-            socketClient.sendMessage(message: string , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
+            socketClient.sendMessage(message: string , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
         }
         self.updateValue1(device: device, string: "{ \(temp) }", int: 4);
     }
@@ -380,13 +398,19 @@ extension ViewController: EmpaticaDeviceDelegate {
     
     @objc func calculateHRMinMax() {
         
+        if (self.flag==1){
+            return
+        }
         
+        self.flag=1;
         let bvp = self.bvp;
         let bvpdif = self.bvpdiff;
         let lastbvp = Array(bvp.suffix(self.samplesWind));
         let lastbvpdif = Array(bvpdif.suffix(self.samplesWind));
         let minValidIBI : Float = 400;
         
+        
+        print(socketClient.connection)
         
         if(lastbvp.count<=20){
             return
@@ -446,23 +470,35 @@ extension ViewController: EmpaticaDeviceDelegate {
         print(" hr:");
         print(hr);
         
-       
+        
         if(!hr.isNaN){
             self.heartRateInst.append(hr);
             
             
             
             
-            var someDict = [String: Any]();
-            someDict["@type"]="feature";
-            someDict["creationTimestamp"]=NSDate().timeIntervalSince1970;
-            someDict["source"]="EMPATICA";
-            someDict["feature"]="HR_BVP"
-            someDict["value"]=hr
-            guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
-            if let string = String(data: httpBody, encoding: String.Encoding.utf8){
-                socketClient.sendMessage(message: string , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
-            }
+            //            var someDict = [String: Any]();
+            //            someDict["@type"]="feature";
+            //            someDict["creationTimestamp"]=NSDate().timeIntervalSince1970;
+            //            someDict["source"]="EMPATICA";
+            //            someDict["feature"]="AVG_HEART_RATE"
+            //            someDict["value"]=hr
+            //            guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+            //            let string = String(data: httpBody, encoding: String.Encoding.utf8)
+            //            socketClient.sendMessage(message: string! , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+            
+            var someDict1 = [String: Any]();
+            someDict1["@type"]="feature";
+            someDict1["creationTimestamp"]=(NSDate().timeIntervalSince1970+1)*1000;
+            someDict1["source"]="EMPATICA";
+            someDict1["feature"]="HEART_RATE"
+            someDict1["value"]=hr
+            guard let httpBody1 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
+            let string1 = String(data: httpBody1, encoding: String.Encoding.utf8)
+            socketClient.sendMessage(message: string1! , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+            
+            
+            
             
             
             if(self.heartRateInst.count>17){
@@ -470,55 +506,89 @@ extension ViewController: EmpaticaDeviceDelegate {
                 let avgHr=average(nums: Array(self.heartRateInst.suffix(15)));
                 self.heartRateAvg.append(avgHr);
                 
+                
+                
+                
+                var someDict = [String: Any]();
+                someDict["@type"]="feature";
+                someDict["creationTimestamp"]=NSDate().timeIntervalSince1970*1000;
+                someDict["source"]="EMPATICA";
+                someDict["feature"]="AVG_HEART_RATE"
+                someDict["value"]=avgHr
+                guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+                let string = String(data: httpBody, encoding: String.Encoding.utf8)
+                socketClient.sendMessage(message: string! , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+                
                 print("avg hr:");
                 print(avgHr);
                 
                 
-                var someDict1 = [String: Any]();
-                someDict["@type"]="feature";
-                someDict["creationTimestamp"]=NSDate().timeIntervalSince1970;
-                someDict["source"]="EMPATICA";
-                someDict["feature"]="HR_BVP_AVG"
-                someDict["value"]=avgHr
-                guard let httpBody1 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
-                if let string1 = String(data: httpBody1, encoding: String.Encoding.utf8){
-                    socketClient.sendMessage(message: string1 , toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
-                }
                 
                 
             }
             
         }
         
-     
-       
-        
-        
-        
         
         
     }
     
     func didReceiveAccelerationX(_ x: Int8, y: Int8, z: Int8, withTimestamp timestamp: Double, fromDevice device: EmpaticaDeviceManager!) {
-
-
-//        var someDict = [String: Any]();
-//        someDict["serialNumber"]=device.serialNumber;
-//        someDict["timestamp"]=timestamp
-//        someDict["accValsx"]=x;
-//        someDict["accValsy"]=y;
-//        someDict["accValsz"]=z;
-//        someDict["key"]="acc";
-//        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
-//        var string = String(data: httpBody, encoding: String.Encoding.utf8)
-//
-//        //print(string);
-//
-//        //print(socketClient.isConnected());
-//        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/queue/Sampletopic" , withHeaders: nil, withReceipt: nil)
-
+        
+        var someDict = [String: Any]();
+        someDict["@type"]="feature";
+        someDict["creationTimestamp"]=timestamp*1000;
+        someDict["source"]="EMPATICA";
+        someDict["feature"]="accx"
+        someDict["value"]=x
+        
+        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        if let string = String(data: httpBody, encoding: String.Encoding.utf8){
+            socketClient.sendMessage(message: string , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        }
+        
+        var someDict1 = [String: Any]();
+        someDict1["@type"]="feature";
+        someDict1["creationTimestamp"]=timestamp*1000;
+        someDict1["source"]="EMPATICA";
+        someDict1["feature"]="accy"
+        someDict1["value"]=y
+        
+        guard let httpBody1 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
+        if let string1 = String(data: httpBody1, encoding: String.Encoding.utf8){
+            socketClient.sendMessage(message: string1 , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        }
+        
+        
+        var someDict2 = [String: Any]();
+        someDict1["@type"]="feature";
+        someDict1["creationTimestamp"]=timestamp*1000;
+        someDict1["source"]="EMPATICA";
+        someDict1["feature"]="accz"
+        someDict1["value"]=z
+        
+        guard let httpBody2 = try? JSONSerialization.data(withJSONObject: someDict1, options: []) else { return };
+        if let string2 = String(data: httpBody2, encoding: String.Encoding.utf8){
+            socketClient.sendMessage(message: string2 , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        }
+        
+        //        var someDict = [String: Any]();
+        //        someDict["serialNumber"]=device.serialNumber;
+        //        someDict["timestamp"]=timestamp
+        //        someDict["accValsx"]=x;
+        //        someDict["accValsy"]=y;
+        //        someDict["accValsz"]=z;
+        //        someDict["key"]="acc";
+        //        guard let httpBody = try? JSONSerialization.data(withJSONObject: someDict, options: []) else { return };
+        //        var string = String(data: httpBody, encoding: String.Encoding.utf8)
+        //
+        //        //print(string);
+        //
+        //print(socketClient.isConnected());
+        //        socketClient.sendMessage(message: string ?? "No Data", toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        
         //print(string);
-
+        
         self.updateValue1(device: device, string: "{x: \(x), y: \(y), z: \(z)}" ,int: 5);
         //        print("\(device.serialNumber!) ACC > {x: \(x), y: \(y), z: \(z)}")
     }
@@ -602,7 +672,7 @@ extension ViewController {
         
         EmpaticaAPI.cancelDiscovery()
         
-       // print(indexPath.section);
+        // print(indexPath.section);
         
         let device = self.devices[indexPath.section]
         
@@ -759,8 +829,8 @@ extension ViewController {
 extension ViewController: StompClientLibDelegate {
     
     func stompClientDidConnect(client: StompClientLib!) {
-        let topic = "/queue/Sampletopic"
-       // print("Socket is Connected : \(topic)")
+        let topic = "/topic/DataMessage.JSON1"
+        print("Socket is Connected : \(topic)")
         socketClient.subscribe(destination: topic)
     }
     
@@ -774,16 +844,17 @@ extension ViewController: StompClientLibDelegate {
     
     func stompClient(client: StompClientLib!, didReceiveMessageWithJSONBody jsonBody: AnyObject?, withHeader header: [String : String]?, withDestination destination: String) {
         //print("DESTIONATION : \(destination)")
-        //print("JSON BODY : \(String(describing: jsonBody))")
+        print("JSON BODY : \(String(describing: jsonBody))")
     }
     
     func stompClientJSONBody(client: StompClientLib!, didReceiveMessageWithJSONBody jsonBody: String?, withHeader header: [String : String]?, withDestination destination: String) {
-       // print("DESTIONATION : \(destination)")
-        //print("String JSON BODY : \(String(describing: jsonBody))")
+        // print("DESTIONATION : \(destination)")
+        //        print(client.connection);
+        print("String JSON BODY : \(String(describing: jsonBody))")
     }
     
     func serverDidSendReceipt(client: StompClientLib!, withReceiptId receiptId: String) {
-       // print("Receipt : \(receiptId)")
+        // print("Receipt : \(receiptId)")
     }
     
     func serverDidSendError(client: StompClientLib!, withErrorMessage description: String, detailedErrorMessage message: String?) {
@@ -812,6 +883,8 @@ class DeviceTableViewCell : UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 }
+
+
 
 
 
