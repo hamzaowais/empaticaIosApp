@@ -71,6 +71,8 @@ class ViewController: UITableViewController {
                     DispatchQueue.main.async {
                         self.discover()
                     }
+                }else{
+                    print("holy cow")
                 }
             }
         }
