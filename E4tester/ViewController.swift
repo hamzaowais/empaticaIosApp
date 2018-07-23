@@ -5,6 +5,7 @@
 
 import UIKit
 import StompClientLib
+import Charts;
 
 
 
@@ -35,12 +36,14 @@ class ViewController: UITableViewController {
     private var heartRateAvg : [Float] = [];
     
     private var flag=1;
+    var hostaddress=String();
+    var messageBrokerConnection=0;
+    
+    var bluetoothConnection = -1;
     
     
     
-    
-    
-    
+    @IBOutlet weak var lineChartView: LineChartView!
     
     
     
@@ -54,7 +57,11 @@ class ViewController: UITableViewController {
     
     override func viewDidLoad() {
         
-        let url = NSURL(string: "ws://172.31.186.13:61614")!
+        print(hostaddress);
+        
+        let url = NSURL(string: "ws://172.31.198.181:61614")!
+        //let url = NSURL(string: hostaddress)!
+        print(url);
         socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
         
         super.viewDidLoad()
@@ -72,7 +79,7 @@ class ViewController: UITableViewController {
                         self.discover()
                     }
                 }else{
-                    print("holy cow")
+                    
                 }
             }
         }
@@ -84,9 +91,57 @@ class ViewController: UITableViewController {
         }
         
         
+
         
         
     }
+    
+    func SetChartValues(){
+        
+    
+        let bvp = self.bvp;
+        let bvpdif = self.bvpdiff;
+        let lastbvp = Array(bvp.suffix(self.samplesWind));
+        let lastbvpdif = Array(bvpdif.suffix(self.samplesWind));
+        let minValidIBI : Float = 400;
+        
+        
+        print(socketClient.connection)
+        
+        if(lastbvp.count<=20){
+            return
+        }
+        
+        
+        let values1 = (0..<lastbvpdif.count).map { (i) -> ChartDataEntry in
+            var value: Double = Double(i);
+            var temp = lastbvpdif[i];
+            let bvpvall = Double(temp)
+            return ChartDataEntry(x: value, y:bvpvall);
+            
+        }
+        let set1 = LineChartDataSet(values: values1, label: "Blood Volume Pulse");
+        set1.circleRadius=0;
+        set1.fillColor = UIColor.blue
+        set1.drawFilledEnabled = true
+        
+        let data = LineChartData(dataSet:set1);
+        
+        self.lineChartView.data=data;
+        self.lineChartView.drawBordersEnabled = false
+        self.lineChartView.backgroundColor=UIColor.white;
+        
+	
+        
+        
+        
+    }
+    
+    
+    
+    
+    
+    
     
     private func discover() {
         EmpaticaAPI.discoverDevices(with: self)
@@ -105,13 +160,14 @@ class ViewController: UITableViewController {
         device.connect(with: self)
     }
     private func updateValue1(device : EmpaticaDeviceManager, string : String = "", int: Int) {
-        if let section = self.devices.index(of: device) {
+        if var section = self.devices.index(of: device) {
+            section=section+1;
             DispatchQueue.main.async {
                 let cell = self.tableView.cellForRow(at: IndexPath(row: int, section: section));
                 let cell2 = self.tableView.cellForRow(at: IndexPath(row: 7, section: section));
                 cell?.detailTextLabel?.text = "\(string)"
                 cell?.detailTextLabel?.textColor = UIColor.gray
-                let elapsedTime = Int(Date().timeIntervalSince1970)-self.deviceDataCollected[section].deviceConnectTime!;
+                let elapsedTime = Int(Date().timeIntervalSince1970)-self.deviceDataCollected[section-1].deviceConnectTime!;
                 cell2?.detailTextLabel?.text = "\(elapsedTime)"
                 
                 let cell1 = self.tableView.cellForRow(at: IndexPath(row: 0, section: section))
@@ -139,8 +195,9 @@ class ViewController: UITableViewController {
     
     private func updateValue(device : EmpaticaDeviceManager, string : String = "") {
         
-        if let row = self.devices.index(of: device) {
+        if var row = self.devices.index(of: device) {
             
+            row=row+1;
             
             DispatchQueue.main.async {
                 
@@ -248,15 +305,19 @@ extension ViewController: EmpaticaDelegate {
         
         switch status {
         case kBLEStatusReady:
-            print("[didUpdate] status \(status.rawValue) • kBLEStatusReady")
+            print("[didUpdate] status \(status.rawValue) • kBLEStatusReady");
+            bluetoothConnection=0;
             break
         case kBLEStatusScanning:
-            print("[didUpdate] status \(status.rawValue) • kBLEStatusScanning")
+            print("[didUpdate] status \(status.rawValue) • kBLEStatusScanning");
+            bluetoothConnection=1;
             break
         case kBLEStatusNotAvailable:
             print("[didUpdate] status \(status.rawValue) • kBLEStatusNotAvailable")
+            bluetoothConnection=2;
             break
         default:
+            bluetoothConnection=3;
             print("[didUpdate] status \(status.rawValue)")
         }
     }
@@ -400,6 +461,9 @@ extension ViewController: EmpaticaDeviceDelegate {
     
     @objc func calculateHRMinMax() {
         
+        
+        SetChartValues();
+        
         if (self.flag==1){
             return
         }
@@ -471,6 +535,12 @@ extension ViewController: EmpaticaDeviceDelegate {
         print("hamza");
         print(" hr:");
         print(hr);
+        if(self.devices.count>0){
+            self.updateValue1(device: self.devices[0], string: "\(hr)",int: 9);
+            self.updateValue1(device: self.devices[0], string: "40",int: 11);
+        }
+        
+        
         
         
         if(!hr.isNaN){
@@ -508,6 +578,10 @@ extension ViewController: EmpaticaDeviceDelegate {
                 let avgHr=average(nums: Array(self.heartRateInst.suffix(15)));
                 self.heartRateAvg.append(avgHr);
                 
+                
+                if(self.devices.count>0){
+                    self.updateValue1(device: self.devices[0], string: "\(avgHr)",int: 10);
+                }
                 
                 
                 
@@ -603,11 +677,6 @@ extension ViewController: EmpaticaDeviceDelegate {
     }
     
     
-    
-    
-    
-    
-    
     func didReceiveTag(atTimestamp timestamp: Double, fromDevice device: EmpaticaDeviceManager!) {
         
         //print("\(device.serialNumber!) TAG received { \(timestamp) }")
@@ -669,14 +738,18 @@ extension ViewController: EmpaticaDeviceDelegate {
 extension ViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if(indexPath.section == 0){
+            return;
+        }
         
         tableView.deselectRow(at: indexPath, animated: true)
         
         EmpaticaAPI.cancelDiscovery()
+        messageBrokerConnection=4;
         
         // print(indexPath.section);
         
-        let device = self.devices[indexPath.section]
+        let device = self.devices[indexPath.section-1]
         
         if device.deviceStatus == kDeviceStatusConnected || device.deviceStatus == kDeviceStatusConnecting {
             
@@ -688,7 +761,7 @@ extension ViewController {
             var tempVar =  deviceData();
             tempVar.serialNumber = device.serialNumber;
             tempVar.deviceConnectTime=Int(Date().timeIntervalSince1970);
-            self.deviceDataCollected[indexPath.section]=tempVar;
+            self.deviceDataCollected[indexPath.section-1]=tempVar;
             self.connect(device: device)
             
         }
@@ -701,12 +774,19 @@ extension ViewController {
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         
-        return self.devices.count
+        return self.devices.count+1;
     }
     
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        if(section == 0){
+            
+            let view = UIView()
+            view.backgroundColor = UIColor.clear
+            return view
+            
+        }
         
-        let device = self.devices[section]
+        let device = self.devices[section-1]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "device") as? DeviceTableViewCell ?? DeviceTableViewCell(device: device)
         
@@ -726,18 +806,100 @@ extension ViewController {
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return 9
+        if(section==0){
+            return 4;
+        }
+        return 13
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
+        if(indexPath.section==0){
+            
+            
+            let cell = tableView.dequeueReusableCell(withIdentifier: "device", for: indexPath)
+            
+            if(indexPath.row == 0){
+                print(socketClient.connection);
+                var tempstr = "ActiveMQ Connection hosted at: ";
+                cell.textLabel?.text = tempstr+hostaddress;
+                if(socketClient.connection == true){
+                    cell.detailTextLabel?.text="Connected";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "greenball.png");
+                    return cell;
+                }else{
+                    cell.detailTextLabel?.text="Disconnected";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "redball");
+                }
+                
+                
+            }
+            if(indexPath.row == 1){
+                cell.textLabel?.text = "Bluetooth Status:";
+                if(messageBrokerConnection==0){
+                    cell.detailTextLabel?.text="Ready and Scanning for Devices";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "greenball.png");
+                }else if(messageBrokerConnection==1) {
+                    cell.detailTextLabel?.text="Ready and Scanning for Devices";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "greenball.png");
+                }else if(messageBrokerConnection==2){
+                    cell.detailTextLabel?.text="Turn on the Bluetooth";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "redball.png");
+                }else if(messageBrokerConnection==4){
+                    cell.detailTextLabel?.text="Connection with Empatica Device Established, Scanning Stoped.";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "greenball.png");
+                }else{
+                    cell.detailTextLabel?.text="Bluetooth Not Ready.";
+                    cell.detailTextLabel?.textColor = UIColor.gray
+                    cell.imageView?.image = UIImage(named: "redball.png");
+                }
+            }
+            if(indexPath.row == 2){
+                
+                
+                cell.textLabel?.text = "The number of Empatica bands Connected: " + String(self.devices.count );
+                if(self.devices.count > 0){
+                    cell.imageView?.image = UIImage(named: "greenball.png");
+                }else{
+                    cell.imageView?.image = UIImage(named: "redball.png");
+                }
+            }
+            
+            if(indexPath.row == 3){
+                
+                
+                cell.textLabel?.text = "Click Here Calculate the Resting Heart Rate";
+                cell.detailTextLabel?.text="";
+                
+            }
+            
+            
+            
+            return cell
+            
+            
+//            let indexPath = IndexPath(row: indexPath.row, section: indexPath.section)
+//            let cell = tableView.cellForRow(at: indexPath)
+//
+//            cell?. = "hamza";
+//            return cell!;
+            
+        }
         
-        let device = self.devices[indexPath.section];
+        
+        let device = self.devices[indexPath.section-1];
         
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "device") as? DeviceTableViewCell ?? DeviceTableViewCell(device: device)
         
         if(indexPath.row==0){
+            
             
             
             // cell.device = device
@@ -758,12 +920,14 @@ extension ViewController {
             cell.detailTextLabel?.textColor = UIColor.orange
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             cell.textLabel?.text = "IBI"
+            cell.imageView?.image = UIImage(named: "ibi1.png");
             return cell
         }
         if(indexPath.row==2){
             
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             cell.textLabel?.text = "GSR"
+            cell.imageView?.image = UIImage(named: "sweat.png");
             return cell
         }
         if(indexPath.row==3){
@@ -771,6 +935,7 @@ extension ViewController {
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
             cell.textLabel?.text = "BVP"
+            cell.imageView?.image = UIImage(named: "gsr.png");
             return cell
             
         }
@@ -779,6 +944,7 @@ extension ViewController {
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
             cell.textLabel?.text = "Temp"
+            cell.imageView?.image = UIImage(named: "temp.png");
             return cell
             
         }
@@ -788,6 +954,7 @@ extension ViewController {
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
             cell.textLabel?.text = "Acceleration"
+            cell.imageView?.image = UIImage(named: "accel.png");
             return cell
             
         }
@@ -795,6 +962,7 @@ extension ViewController {
             
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
+            cell.imageView?.image = UIImage(named: "battery.png");
             cell.textLabel?.text = "Battery level"
             return cell
             
@@ -804,6 +972,7 @@ extension ViewController {
             
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             cell.textLabel?.text = "Time Elapsed:"
+            cell.imageView?.image = UIImage(named: "time1.png");
             return cell
             
         }
@@ -813,6 +982,79 @@ extension ViewController {
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
             cell.textLabel?.text = "LastTimeStampPressed:"
+            cell.imageView?.image = UIImage(named: "time2.png");
+            return cell
+            
+        }
+        if(indexPath.row==8){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "LastTimeStampPressed:"
+            
+            return cell
+            
+        }
+        if(indexPath.row==9){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Instantaneous Heart Rate"
+            cell.imageView?.image = UIImage(named: "hr.png");
+            return cell
+            
+        }
+        if(indexPath.row==10){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Average Heart Rate"
+            cell.imageView?.image = UIImage(named: "hr.png");
+            return cell
+            
+        }
+        if(indexPath.row==11){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Cognitive Work Load"
+            cell.imageView?.image = UIImage(named: "stress.png");
+            return cell
+            
+        }
+        if(indexPath.row==13){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Instantaneous Heart Rate - Peak Detection"
+            cell.imageView?.image = UIImage(named: "hr.png");
+            return cell
+            
+        }
+        if(indexPath.row==13){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Average Heart Rate - Peak Detection"
+            cell.imageView?.image = UIImage(named: "hr.png");
+            return cell
+            
+        }
+        if(indexPath.row==13){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Cognitive Work Load"
+            cell.imageView?.image = UIImage(named: "stress.png");
+            return cell
+            
+        }
+        if(indexPath.row==12){
+            
+            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+            
+            cell.textLabel?.text = "Graphs"
+            cell.backgroundColor=UIColor.orange
             return cell
             
         }
