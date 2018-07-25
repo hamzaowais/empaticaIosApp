@@ -3,9 +3,20 @@
 //  E4 tester
 //
 
-import UIKit
-import StompClientLib
+import UIKit;
 import Charts;
+import StompClientLib;
+import Accelerate;
+
+
+extension Collection where Iterator.Element == Double {
+    var doubleArray: [Double] {
+        return compactMap{ Double($0) }
+    }
+    var floatArray: [Float] {
+        return compactMap{ Float($0) }
+    }
+}
 
 
 
@@ -25,6 +36,9 @@ class ViewController: UITableViewController {
     private var Config  = SettingHelper()
     private var socketClient = StompClientLib();
     private var bvp: [Float] = [];
+    private var accelx: [Int8] = [];
+    private var accely: [Int8] = [];
+    private var accelz: [Int8] = [];
     private var bvpdiff: [Float] = [];
     private var lastBvp: Float = 0.0;
     private var fs = 64;
@@ -88,7 +102,19 @@ class ViewController: UITableViewController {
         
         DispatchQueue.global(qos: .userInteractive).sync {
             self.timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(ViewController.calculateHRMinMax), userInfo: nil, repeats: true);
+            
+            
+            
         }
+        
+//        DispatchQueue.global(qos: .userInteractive).sync {
+//            self.timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(ViewController.calculateHrFFT), userInfo: nil, repeats: true);
+//
+//
+//
+//        }
+        
+        
         
         
 
@@ -106,7 +132,13 @@ class ViewController: UITableViewController {
         let minValidIBI : Float = 400;
         
         
-        print(socketClient.connection)
+        print(socketClient.isConnected());
+        if(socketClient.connection==false){
+            let url = NSURL(string: "ws://172.31.198.181:61614")!
+            //let url = NSURL(string: hostaddress)!
+            print(url);
+            socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
+        }
         
         if(lastbvp.count<=20){
             return
@@ -459,6 +491,141 @@ extension ViewController: EmpaticaDeviceDelegate {
     }
     
     
+    
+    
+    
+    
+    
+    public func fft(_ input: [Double]) -> ([Double],[Double]) {
+        
+        var real = [Double](input)
+        
+        var imaginary = [Double](repeating: 0.0, count: input.count)
+        
+        var splitComplex = DSPDoubleSplitComplex(realp: &real, imagp: &imaginary)
+        
+        
+        let length = vDSP_Length(floor(log2(Float(input.count))))
+        print(length);
+        
+        let radix = FFTRadix(kFFTRadix2)
+        print(radix);
+        
+        let weights = vDSP_create_fftsetupD(length, radix)
+        
+        vDSP_fft_zipD(weights!, &splitComplex, 1, length, FFTDirection(FFT_FORWARD))
+        
+        return (real, imaginary)
+        
+        
+    }
+    @objc public func calculateHrFFT(){
+        
+        
+        
+        var fs = 32;
+        var sampleLen=fs*64;
+        var tempbvp: [Float] = Array(bvp.suffix(sampleLen));
+        var tempaccx: [Int8] = Array(accelx.suffix(sampleLen/2));
+        var tempaccy: [Int8] = Array(accely.suffix(sampleLen/2));
+        var tempaccz: [Int8] = Array(accelz.suffix(sampleLen/2));
+        
+        if(tempbvp.count<sampleLen){
+            return;
+        }
+        var n = tempbvp.count;
+        var tempbvpDouble: [Double] = [];
+        for i in 0..<tempbvp.count{
+            tempbvpDouble.append(Double(tempbvp[i]));
+        }
+        var (realfft,imgfft)=fft(tempbvpDouble);
+        var midpoint = realfft.count / 2
+        var realfftmid = realfft[..<(midpoint+1)];
+        var imgfftmid = imgfft[..<(midpoint+1)];
+        var powerfft: [Double] = [];
+        for i in 0..<realfftmid.count {
+            var temp = pow(realfftmid[i],2) + pow(imgfftmid[i],2);
+            powerfft.append(temp);
+        }
+        var maxPowerfft=powerfft.max();
+        for i in 0..<powerfft.count {
+            powerfft[i]=powerfft[i]/maxPowerfft!;
+        }
+        var freq: [Double] = [];
+        var tempw = Int32((Float(fs)/2)/(Float(fs)/Float(n)));
+        
+        for i in (0..<tempw){
+            freq.append(Double(Float(i)*(Float(fs)/Float(n))*60));
+        }
+        var tempaccxDouble: [Double] = [];
+        for i in 0..<tempaccx.count{
+            tempaccxDouble.append(Double(tempaccx[i]));
+        }
+        var tempaccyDouble: [Double] = [];
+        for i in 0..<tempaccy.count{
+            tempaccyDouble.append(Double(tempaccy[i]));
+        }
+        var tempacczDouble: [Double] = [];
+        for i in 0..<tempaccz.count{
+            tempacczDouble.append(Double(tempaccz[i]));
+        }
+        
+        var (realfftx,imgfftx) = fft(tempaccxDouble);
+        midpoint = realfftx.count / 2
+        var realfftxmid = realfftx[..<(midpoint+1)];
+        var imgfftxmid = imgfftx[..<(midpoint+1)];
+        var powerfftx: [Double] = [];
+        for i in 0..<realfftxmid.count {
+            var temp = pow(realfftxmid[i],2) + pow(imgfftxmid[i],2);
+            powerfftx.append(temp);
+        }
+        
+        var maxpowerfftx=powerfftx.max();
+        for i in 0..<powerfftx.count {
+            powerfftx[i]=powerfftx[i]/maxpowerfftx!;
+        }
+        
+        var (realffty,imgffty) = fft(tempaccyDouble);
+        midpoint = realffty.count / 2
+        var realfftymid = realffty[..<(midpoint+1)];
+        var imgfftymid = imgffty[..<(midpoint+1)];
+        var powerffty: [Double] = [];
+        for i in 0..<realfftymid.count {
+            var temp = pow(realfftymid[i],2) + pow(imgfftymid[i],2);
+            powerffty.append(temp);
+        }
+        var maxpowerffty=powerffty.max();
+        for i in 0..<powerffty.count {
+            powerffty[i]=powerffty[i]/maxpowerffty!;
+        }
+        var (realfftz,imgfftz) = fft(tempacczDouble);
+        midpoint = realfftz.count / 2
+        var realfftzmid = realfftz[..<(midpoint+1)];
+        var imgfftzmid = imgfftz[..<(midpoint+1)];
+        var powerfftz: [Double] = [];
+        for i in 0..<realfftzmid.count {
+            var temp = pow(realfftzmid[i],2) + pow(imgfftzmid[i],2);
+            powerfftz.append(temp);
+        }
+        var maxpowerfftz=powerfftz.max();
+        for i in 0..<powerfftz.count {
+            powerfftz[i]=powerfftz[i]/maxpowerfftz!;
+        }
+        var finalHR=Double(60);
+        var maxMag = Double(-10000);
+        for i in 0..<powerfftz.count {
+            var currentPow = powerfft[i]-0.5*max(max(powerfftz[i],powerffty[i]),powerfftx[i]);
+            if(currentPow>0.00 && currentPow>maxMag && freq[i]>60.00 && freq[i]<150.00 ){
+                finalHR=freq[i];
+                maxMag=currentPow;
+            }
+        }
+        print(finalHR);
+        
+    }
+    
+
+    
     @objc func calculateHRMinMax() {
         
         
@@ -476,7 +643,8 @@ extension ViewController: EmpaticaDeviceDelegate {
         let minValidIBI : Float = 400;
         
         
-        print(socketClient.connection)
+        print(socketClient.isConnected());
+       
         
         if(lastbvp.count<=20){
             return
@@ -520,9 +688,7 @@ extension ViewController: EmpaticaDeviceDelegate {
                 total += Float(vote)
                 
             }
-            
             let votesTotal = Float(nums.count)
-            
             var average = total/votesTotal
             return average
         }
@@ -665,6 +831,10 @@ extension ViewController: EmpaticaDeviceDelegate {
         
         //print(string);
         
+        accelx.append(x);
+        accely.append(y);
+        accelz.append(z);
+        
         self.updateValue1(device: device, string: "{x: \(x), y: \(y), z: \(z)}" ,int: 5);
         //        print("\(device.serialNumber!) ACC > {x: \(x), y: \(y), z: \(z)}")
     }
@@ -739,11 +909,19 @@ extension ViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if(indexPath.section == 0){
+            if(indexPath.row==0){
+                let url = NSURL(string: "ws://172.31.198.181:61614")!
+                //let url = NSURL(string: hostaddress)!
+                print(url);
+                socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
+            }
             return;
         }
         
         tableView.deselectRow(at: indexPath, animated: true)
         
+        if(indexPath.row==0)
+        {
         EmpaticaAPI.cancelDiscovery()
         messageBrokerConnection=4;
         
@@ -767,6 +945,7 @@ extension ViewController {
         }
         
         self.updateValue(device: device)
+    }
     }
 }
 
@@ -822,7 +1001,10 @@ extension ViewController {
             if(indexPath.row == 0){
                 print(socketClient.connection);
                 var tempstr = "ActiveMQ Connection hosted at: ";
+                
                 cell.textLabel?.text = tempstr+hostaddress;
+                print("show this");
+                print(socketClient.isConnected());
                 if(socketClient.connection == true){
                     cell.detailTextLabel?.text="Connected";
                     cell.detailTextLabel?.textColor = UIColor.gray
