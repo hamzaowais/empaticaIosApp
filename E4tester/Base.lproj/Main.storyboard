@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14113" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="xRN-7Q-Ooa">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="xRN-7Q-Ooa">
     <device id="retina5_5" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
@@ -88,7 +88,7 @@
                         <color key="separatorColor" red="0.16078431369999999" green="0.2901960784" blue="0.4941176471" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <color key="sectionIndexBackgroundColor" red="0.16078431369999999" green="0.2901960784" blue="0.4941176471" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <view key="tableFooterView" contentMode="scaleToFill" id="Ufe-ql-983" customClass="LineChartView" customModule="Charts">
-                            <rect key="frame" x="0.0" y="72" width="414" height="132"/>
+                            <rect key="frame" x="0.0" y="168" width="414" height="132"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         </view>
@@ -120,6 +120,63 @@
                                     <color key="backgroundColor" red="1" green="0.90196078431372551" blue="0.51764705882352946" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 </tableViewCellContentView>
                             </tableViewCell>
+                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="activity" id="bfy-7j-6Ke" customClass="Activity">
+                                <rect key="frame" x="0.0" y="72" width="414" height="44"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="bfy-7j-6Ke" id="JEl-KB-NH2">
+                                    <rect key="frame" x="0.0" y="0.0" width="414" height="43.666666666666664"/>
+                                    <autoresizingMask key="autoresizingMask"/>
+                                    <subviews>
+                                        <segmentedControl opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="P80-WW-yiR">
+                                            <rect key="frame" x="0.0" y="7" width="414" height="29"/>
+                                            <segments>
+                                                <segment title="Resting"/>
+                                                <segment title="Moving"/>
+                                                <segment title="Applying Sealant"/>
+                                                <segment title="Scraping"/>
+                                                <segment title="Flange Task"/>
+                                            </segments>
+                                            <connections>
+                                                <action selector="activityAction:" destination="yTx-bI-ORX" eventType="valueChanged" id="3DD-Mv-WAk"/>
+                                            </connections>
+                                        </segmentedControl>
+                                    </subviews>
+                                    <constraints>
+                                        <constraint firstItem="P80-WW-yiR" firstAttribute="leading" secondItem="JEl-KB-NH2" secondAttribute="leading" id="S1h-la-gqX"/>
+                                        <constraint firstAttribute="trailing" secondItem="P80-WW-yiR" secondAttribute="trailing" id="zyE-mu-fPv"/>
+                                    </constraints>
+                                </tableViewCellContentView>
+                            </tableViewCell>
+                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="condition" rowHeight="52" id="xvP-GM-fgK">
+                                <rect key="frame" x="0.0" y="116" width="414" height="52"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="xvP-GM-fgK" id="Rkg-h4-Nob">
+                                    <rect key="frame" x="0.0" y="0.0" width="414" height="51.666666666666664"/>
+                                    <autoresizingMask key="autoresizingMask"/>
+                                    <subviews>
+                                        <segmentedControl opaque="NO" contentMode="scaleToFill" ambiguous="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="BYW-yG-nZG">
+                                            <rect key="frame" x="0.0" y="8" width="414" height="29"/>
+                                            <segments>
+                                                <segment title="Sit"/>
+                                                <segment title="stand"/>
+                                                <segment title="back"/>
+                                                <segment title="front"/>
+                                                <segment title="side (l)"/>
+                                                <segment title="side (r)"/>
+                                                <segment title="crouch"/>
+                                                <segment title="bent over"/>
+                                            </segments>
+                                            <connections>
+                                                <action selector="conditionAction:" destination="yTx-bI-ORX" eventType="valueChanged" id="fAZ-jT-19i"/>
+                                            </connections>
+                                        </segmentedControl>
+                                    </subviews>
+                                    <constraints>
+                                        <constraint firstAttribute="trailing" secondItem="BYW-yG-nZG" secondAttribute="trailing" id="HMx-Ca-iUO"/>
+                                        <constraint firstItem="BYW-yG-nZG" firstAttribute="leading" secondItem="Rkg-h4-Nob" secondAttribute="leading" id="RuB-HH-uA7"/>
+                                    </constraints>
+                                </tableViewCellContentView>
+                            </tableViewCell>
                         </prototypes>
                         <connections>
                             <outlet property="dataSource" destination="yTx-bI-ORX" id="vgZ-9D-0Hh"/>
@@ -132,7 +189,7 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="ugA-ap-mye" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-180" y="-216"/>
+            <point key="canvasLocation" x="-181.15942028985509" y="-216.03260869565219"/>
         </scene>
     </scenes>
     <resources>

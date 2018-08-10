@@ -26,6 +26,7 @@ struct deviceData {
     var lastTimeStampPressed: Double? = nil;
 }
 
+
 class ViewController: UITableViewController {
     private var devices: [EmpaticaDeviceManager] = []
     private var deviceDataCollected : [deviceData] = [];
@@ -41,6 +42,7 @@ class ViewController: UITableViewController {
     private var accelz: [Int8] = [];
     private var bvpdiff: [Float] = [];
     private var lastBvp: Float = 0.0;
+    private var lastBvpTimestamp: Double = 0.0;
     private var fs = 64;
     private var processWind = 10;
     private var samplesPerMs:Float = 1000/64;
@@ -48,6 +50,10 @@ class ViewController: UITableViewController {
     
     private var heartRateInst : [Float] = [];
     private var heartRateAvg : [Float] = [];
+    private var activity = 0;
+    private var condition = 0;
+    
+    
     
     private var flag=1;
     var hostaddress=String();
@@ -59,6 +65,19 @@ class ViewController: UITableViewController {
     
     @IBOutlet weak var lineChartView: LineChartView!
     
+  
+    @IBAction func activityAction(_ sender: UISegmentedControl) {
+        
+        self.activity = sender.selectedSegmentIndex;
+        print(self.activity);
+        
+    }
+    
+    
+    @IBAction func conditionAction(_ sender: UISegmentedControl) {
+        self.condition=sender.selectedSegmentIndex;
+        print(self.condition);
+    }
     
     
     private var allDisconnected : Bool {
@@ -73,8 +92,9 @@ class ViewController: UITableViewController {
         
         print(hostaddress);
         
-        let url = NSURL(string: "ws://172.31.198.181:61614")!
-        //let url = NSURL(string: hostaddress)!
+        //let url = NSURL(string: "ws://192.168.1.143:61614")!
+        print(hostaddress);
+        let url = NSURL(string: hostaddress)!
         print(url);
         socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
         
@@ -123,8 +143,6 @@ class ViewController: UITableViewController {
     }
     
     func SetChartValues(){
-        
-    
         let bvp = self.bvp;
         let bvpdif = self.bvpdiff;
         let lastbvp = Array(bvp.suffix(self.samplesWind));
@@ -134,8 +152,9 @@ class ViewController: UITableViewController {
         
         print(socketClient.isConnected());
         if(socketClient.connection==false){
-            let url = NSURL(string: "ws://172.31.198.181:61614")!
-            //let url = NSURL(string: hostaddress)!
+            //let url = NSURL(string: "ws://192.168.1.143:61614")!
+            print(hostaddress);
+            let url = NSURL(string: hostaddress)!
             print(url);
             socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
         }
@@ -453,6 +472,7 @@ extension ViewController: EmpaticaDeviceDelegate {
         self.bvp.append(bvp);
         self.bvpdiff.append(bvp-self.lastBvp);
         self.lastBvp=bvp;
+        self.lastBvpTimestamp=timestamp;
         
         self.flag=0;
         
@@ -629,13 +649,43 @@ extension ViewController: EmpaticaDeviceDelegate {
     @objc func calculateHRMinMax() {
         
         
-        SetChartValues();
+        var someDict7 = [String: Any]();
+        someDict7["@type"]="feature";
+        someDict7["creationTimestamp"]=(NSDate().timeIntervalSince1970+1)*1000;
+        someDict7["source"]="EMPATICA";
+        someDict7["feature"]="SUBJECT_ACTIVITY";
+        someDict7["value"]=self.activity;
+        guard let httpBody7 = try? JSONSerialization.data(withJSONObject: someDict7, options: []) else { return };
+        let string7 = String(data: httpBody7, encoding: String.Encoding.utf8)
+        socketClient.sendMessage(message: string7! , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        
+        
+        
+        var someDict8 = [String: Any]();
+        someDict8["@type"]="feature";
+        someDict8["creationTimestamp"]=(NSDate().timeIntervalSince1970+1)*1000;
+        someDict8["source"]="EMPATICA";
+        someDict8["feature"]="SUBJECT_CONDITION";
+        someDict8["value"]=self.condition;
+        guard let httpBody8 = try? JSONSerialization.data(withJSONObject: someDict8, options: []) else { return };
+        let string8 = String(data: httpBody8, encoding: String.Encoding.utf8)
+        socketClient.sendMessage(message: string8! , toDestination:"/topic/DataMessage.JSON" , withHeaders: nil, withReceipt: nil)
+        
+        
+        
+        
+        
+        //SetChartValues();
         
         if (self.flag==1){
             return
         }
         
         self.flag=1;
+        
+        
+        return;
+        
         let bvp = self.bvp;
         let bvpdif = self.bvpdiff;
         let lastbvp = Array(bvp.suffix(self.samplesWind));
@@ -910,8 +960,9 @@ extension ViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         if(indexPath.section == 0){
             if(indexPath.row==0){
-                let url = NSURL(string: "ws://172.31.198.181:61614")!
-                //let url = NSURL(string: hostaddress)!
+                //let url = NSURL(string: "ws://192.168.1.143:61614")!
+                print(hostaddress);
+                let url = NSURL(string: hostaddress)!
                 print(url);
                 socketClient.openSocketWithURLRequest(request: NSURLRequest(url: url as URL) , delegate:self)
             }
@@ -988,7 +1039,7 @@ extension ViewController {
         if(section==0){
             return 4;
         }
-        return 13
+        return 15
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -1078,7 +1129,7 @@ extension ViewController {
         let device = self.devices[indexPath.section-1];
         
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "device") as? DeviceTableViewCell ?? DeviceTableViewCell(device: device)
+        var cell = tableView.dequeueReusableCell(withIdentifier: "device") as? DeviceTableViewCell ?? DeviceTableViewCell(device: device)
         
         if(indexPath.row==0){
             
@@ -1204,34 +1255,52 @@ extension ViewController {
             return cell
             
         }
-        if(indexPath.row==13){
-            
-            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
-            
-            cell.textLabel?.text = "Instantaneous Heart Rate - Peak Detection"
-            cell.imageView?.image = UIImage(named: "hr.png");
-            return cell
-            
-        }
-        if(indexPath.row==13){
-            
-            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
-            
-            cell.textLabel?.text = "Average Heart Rate - Peak Detection"
-            cell.imageView?.image = UIImage(named: "hr.png");
-            return cell
-            
-        }
-        if(indexPath.row==13){
-            
-            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
-            
-            cell.textLabel?.text = "Cognitive Work Load"
-            cell.imageView?.image = UIImage(named: "stress.png");
-            return cell
-            
-        }
+        
         if(indexPath.row==12){
+            
+            let cell1 = tableView.dequeueReusableCell(withIdentifier: "activity");
+            
+            
+            return cell1!;
+            
+        }
+        if(indexPath.row==13){
+            
+            let cell2 = tableView.dequeueReusableCell(withIdentifier: "condition");
+            
+            return cell2!;
+            
+        }
+        
+        
+//        if(indexPath.row==13){
+//            
+//            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+//            
+//            cell.textLabel?.text = "Instantaneous Heart Rate - Peak Detection"
+//            cell.imageView?.image = UIImage(named: "hr.png");
+//            return cell
+//            
+//        }
+//        if(indexPath.row==13){
+//            
+//            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+//            
+//            cell.textLabel?.text = "Average Heart Rate - Peak Detection"
+//            cell.imageView?.image = UIImage(named: "hr.png");
+//            return cell
+//            
+//        }
+//        if(indexPath.row==13){
+//            
+//            cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+//            
+//            cell.textLabel?.text = "Cognitive Work Load"
+//            cell.imageView?.image = UIImage(named: "stress.png");
+//            return cell
+//            
+//        }
+        if(indexPath.row==14){
             
             cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 18)
             
@@ -1255,7 +1324,7 @@ extension ViewController {
 extension ViewController: StompClientLibDelegate {
     
     func stompClientDidConnect(client: StompClientLib!) {
-        let topic = "/topic/DataMessage.JSON1"
+        let topic = "/topic/DataMessage.JSON"
         print("Socket is Connected : \(topic)")
         socketClient.subscribe(destination: topic)
     }

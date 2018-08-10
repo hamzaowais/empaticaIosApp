@@ -12,9 +12,15 @@ class View0ViewController: UIViewController {
 
     @IBOutlet weak var hostAddress: UITextField!
     
+    func isValidIP(s: String) -> Bool {
+        let parts = s.components(separatedBy: ".");
+        let nums = parts.flatMap { Int($0) }
+        return parts.count == 4 && nums.count == 4 && nums.filter { $0 >= 0 && $0 < 256}.count == 4
+    }
+    
    
     @IBAction func continueAction(_ sender: Any) {
-        if(hostAddress.text != ""){
+        if(hostAddress.text != "" && isValidIP(s: hostAddress.text!)){
             //print("shit")
            performSegue(withIdentifier: "segue", sender: self)
         }
@@ -22,7 +28,8 @@ class View0ViewController: UIViewController {
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         var secondController=segue.destination as! ViewController
-        secondController.hostaddress = hostAddress.text!;
+        secondController.hostaddress = "ws://"+hostAddress.text!+":61614";
+        
     }
     
     override func viewDidLoad() {
